@@ -8,20 +8,19 @@ on:
     paths:
       - "app/**"
       - "requirements.txt"
-      - "video_motion_control.spec"
       - ".github/workflows/build-windows-exe.yml"
 
 jobs:
   build:
     runs-on: windows-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
           architecture: x64
@@ -30,20 +29,44 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pyinstaller
+          pip install "pyinstaller>=6.10.0"
 
       - name: Build Windows executable
-        run: pyinstaller --noconfirm --clean video_motion_control.spec
+        shell: pwsh
+        run: |
+          pyinstaller `
+            --noconfirm `
+            --clean `
+            --windowed `
+            --onefile `
+            --name "VideoMotionControl" `
+            --paths . `
+            --hidden-import "PyQt6.QtCore" `
+            --hidden-import "PyQt6.QtGui" `
+            --hidden-import "PyQt6.QtWidgets" `
+            --hidden-import "cv2" `
+            --hidden-import "numpy" `
+            app/main.py
+
+      - name: Verify executable
+        shell: pwsh
+        run: |
+          if (!(Test-Path "dist\VideoMotionControl.exe")) {
+            Write-Error "L'exécutable n'a pas été généré."
+            exit 1
+          }
+          Get-Item "dist\VideoMotionControl.exe" | Select-Object FullName, Length
 
       - name: Create release ZIP
         shell: pwsh
         run: |
-          $destination = "VideoMotionControl-Windows-x64.zip"
-          Compress-Archive -Path "dist\VideoMotionControl\*" -DestinationPath $destination -Force
-          Get-Item $destination | Select-Object Name, Length
+          Compress-Archive `
+            -Path "dist\VideoMotionControl.exe" `
+            -DestinationPath "VideoMotionControl-Windows-x64.zip" `
+            -Force
 
       - name: Upload Windows executable
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: VideoMotionControl-Windows-x64
           path: VideoMotionControl-Windows-x64.zip

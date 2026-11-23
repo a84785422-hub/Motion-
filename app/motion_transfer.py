@@ -28,9 +28,12 @@ class MotionTransferWorker(QThread):
 
     def extract_person(self, image_bgr):
         rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
-        with mp.ImageSizer() as segmenter:
-            result = segmenter.process(mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb))
-        mask = result.segmentationMask
+        with mp.solutions.selfie_segmentation.SelfieSegmentation(
+            model_selection=0
+        ) as segmenter:
+            result = segmenter.process(rgb)
+
+        mask = result.segmentation_mask
         mask = (mask > 0.5).astype(np.uint8) * 255
         mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((7, 7), np.uint8))
         mask = cv2.GaussianBlur(mask, (5, 5), 0)

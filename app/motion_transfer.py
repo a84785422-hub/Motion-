@@ -110,7 +110,7 @@ class MotionTransferWorker(QThread):
         person = rgba[y1:y2 + 1, x1:x2 + 1]
 
         self.message.emit("Initialisation de MediaPipe Pose…")
-        pose = mp.Pose(
+        pose = mp.solutions.pose.Pose(
             static_image_mode=False,
             model_complexity=2,
             smooth_landmarks=True,
